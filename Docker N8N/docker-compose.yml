@@ -1,0 +1,86 @@
+services:
+  nginx:
+    container_name: nginx
+    build: ./nginx
+    ports:
+      - 443:443
+      - 80:80
+    depends_on:
+      n8n:
+        condition: service_healthy
+    volumes:
+      - nginx_static:/usr/share/nginx/html:ro
+    restart: always
+    networks:
+      - n8n_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: n8n_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_POSTGRESDB_DATABASE}
+      POSTGRES_USER: ${DB_POSTGRESDB_USER}
+      POSTGRES_PASSWORD: ${DB_POSTGRESDB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_POSTGRESDB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - n8n_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: n8n_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - n8n_network
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n_app
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - data:/home/node/.n8n
+    networks:
+      - n8n_network
+
+volumes:
+  postgres_data:
+    name: n8n_postgres_data
+  redis_data:
+    name: n8n_redis_data
+  data:
+    name: n8n_data
+  nginx_static:
+    name: n8n_nginx_static
+
+networks:
+  n8n_network:
+    driver: bridge
