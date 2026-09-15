@@ -1,0 +1,30 @@
+# Secretos y entorno local
+.env
+.htpasswd
+
+# Base de datos SQLite activa y temporales WAL
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Datos privados de usuarios y copias de seguridad
+users_data/
+backups/*.gz
+*.log
+
+# Certificados y claves privadas SSL de Certbot
+certbot/conf/*
+!certbot/conf/.gitkeep
+
+# Temporales de Python y sistema
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+tree.txt
+
+# Puntos de anclaje obligatorios para Docker
+!html/generated_audio/.gitkeep
+!certbot/www/.gitkeep
+!backups/.gitkeep
+!data/.gitkeep
